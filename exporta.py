@@ -46,12 +46,18 @@ def pilla_elements_ufs( mp_detectat, bloc_alumne ):
             if uf:
                 ufs.append( { 'uf':uf, 'nota_raw':nota_raw } )
             uf=e.text
-            nota_raw = next( n.text for n in bloc_alumne if n.attrib['top']==e.attrib['top'] and int(n.attrib['left'])>int(e.attrib['left']) )
+            s1 = next( n for n in bloc_alumne if n.attrib['top']==e.attrib['top'] and int(n.attrib['left'])>int(e.attrib['left']) )
+            nota_raw = s1.text
+            try:
+                s2 = next( n for n in bloc_alumne if n.attrib['top']==s1.attrib['top'] and int(n.attrib['left'])>int(s1.attrib['left']) )
+                nota_raw += ( " " + s2.text if s2.text.isdigit() else "" )
+            except StopIteration:
+                pass
         else:
             try:
                 nota_raw_tmp= next( n.text for n in bloc_alumne if n.attrib['top']==e.attrib['top'] and int(n.attrib['left'])>int(e.attrib['left']) )
-                if nota_raw_tmp != "TC:":
-                    nota_raw = (nota_raw or '') + nota_raw_tmp
+                if "TC:" not in nota_raw_tmp:
+                    nota_raw = (nota_raw or '') + " " + nota_raw_tmp
             except StopIteration:
                 pass
     if uf:
@@ -72,8 +78,7 @@ def split_blocs_mps( bloc_alumne ):
 def cuina_nota( nota_raw ):
     f0 = re.search( "^-$", nota_raw )    
     f1 = re.search( "^- (\d+)$", nota_raw )    
-    f2 = re.search( "^- (\d+) A. (\d+)$", nota_raw )    
-    f3 = re.search( "^- (\d+)[ ]+(\d+)$", nota_raw )
+    f2 = re.search( "^- (\d+) (A. | *)(\d+)$", nota_raw )
     f4 = re.search( "^- (\d+) (\w+)$", nota_raw )
     if f0:
         nota=""
@@ -82,11 +87,8 @@ def cuina_nota( nota_raw ):
         nota=""
         hores=f1.groups()[0]
     elif f2:
-        nota=f2.groups()[1]
+        nota=f2.groups()[2]
         hores=f2.groups()[0]
-    elif f3:
-        nota=f3.groups()[1]
-        hores=f3.groups()[0]
     elif f4:
         nota=f4.groups()[1]
         hores=f4.groups()[0]
@@ -111,9 +113,6 @@ def tracta_fitxer(fitxer):
 fitxers = ['smx1a.pdf','smx1b.pdf','smx1c.pdf','smx2a.pdf','smx2b.pdf',]
 for fitxer in fitxers:
     tracta_fitxer(fitxer)
-
-
-
 
 
 
