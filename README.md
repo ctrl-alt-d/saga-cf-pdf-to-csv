@@ -9,5 +9,5 @@ Requeriments:
 
 Execució
 
-export PYTHONIOENCODING=UTF-8
-python exporta.py > export.csv
+    export PYTHONIOENCODING=UTF-8
+    python exporta.py > export.csv
