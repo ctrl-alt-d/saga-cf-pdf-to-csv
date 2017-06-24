@@ -70,10 +70,15 @@ def split_blocs_mps( bloc_alumne ):
 
 
 def cuina_nota( nota_raw ):
+    f0 = re.search( "^-$", nota_raw )    
     f1 = re.search( "^- (\d+)$", nota_raw )    
     f2 = re.search( "^- (\d+) A. (\d+)$", nota_raw )    
-    f3 = re.search( "^- (\d+) (\w+)$", nota_raw )
-    if f1:
+    f3 = re.search( "^- (\d+)[ ]+(\d+)$", nota_raw )
+    f4 = re.search( "^- (\d+) (\w+)$", nota_raw )
+    if f0:
+        nota=""
+        hores=""
+    elif f1:
         nota=""
         hores=f1.groups()[0]
     elif f2:
@@ -82,6 +87,9 @@ def cuina_nota( nota_raw ):
     elif f3:
         nota=f3.groups()[1]
         hores=f3.groups()[0]
+    elif f4:
+        nota=f4.groups()[1]
+        hores=f4.groups()[0]
     else:
         nota=nota_raw
         hores = None
@@ -103,3 +111,11 @@ def tracta_fitxer(fitxer):
 fitxers = ['smx1a.pdf','smx1b.pdf','smx1c.pdf','smx2a.pdf','smx2b.pdf',]
 for fitxer in fitxers:
     tracta_fitxer(fitxer)
+
+
+
+
+
+
+
+
