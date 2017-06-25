@@ -50,7 +50,7 @@ def pilla_elements_ufs( mp_detectat, bloc_alumne ):
             nota_raw = s1.text
             try:
                 s2 = next( n for n in bloc_alumne if n.attrib['top']==s1.attrib['top'] and int(n.attrib['left'])>int(s1.attrib['left']) )
-                nota_raw += ( " " + s2.text if s2.text.isdigit() else "" )
+                nota_raw += ( " " + s2.text if ( s2.text.isdigit() or s2.text == "R") else "" )
             except StopIteration:
                 pass
         else:
@@ -97,20 +97,24 @@ def cuina_nota( nota_raw ):
         hores = None
     return nota, hores
     
-
-def tracta_fitxer(fitxer):
+def tracta_fitxer(fitxer, debug_alumne = None):
     s=pdf2xml(open(fitxer,'rb'))
     root = etree.fromstring(s.replace('\n',''))
     for bloc_alumne in split_blocs_alumnes( root ):
         alumne = dades_alumne( bloc_alumne )
         mps=split_blocs_mps( bloc_alumne )
-        for mp in mps:
-            for uf in mp['ufs']:
-                nota, hores = cuina_nota( uf['nota_raw'] )
-                r = u"{}|{}|{}|{}|{}".format(fitxer.split(".")[0],alumne['nom'], mp['nom'],uf['uf'], nota)
-                print r
+	if debug_alumne:
+            if debug_alumne in alumne['nom']:
+                return bloc_alumne, mps
+        else:
+            for mp in mps:
+                for uf in mp['ufs']:
+                    nota, hores = cuina_nota( uf['nota_raw'] )
+                    r = u"{}|{}|{}|{}|{}|{}".format(fitxer.split(".")[0],alumne['nom'], mp['nom'],uf['uf'], nota, hores)
+                    print r
 
 fitxers = ['smx1a.pdf','smx1b.pdf','smx1c.pdf','smx2a.pdf','smx2b.pdf',]
+print "Grup|Alumne|MP|UF|nota|hores"
 for fitxer in fitxers:
     tracta_fitxer(fitxer)
 
