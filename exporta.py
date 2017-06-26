@@ -3,7 +3,6 @@ import sys
 import re
 from pypdf2xml import pdf2xml
 from lxml import etree
-from collections import OrderedDict
 
 def split_blocs_alumnes( root ):
     blocs = []
@@ -74,39 +73,6 @@ def pilla_elements_ufs( mp_detectat, bloc_alumne ):
 
     return ufs
 
-def tracta_els_10s( bloc_alumne, mps ):
-    deus=[ x for x in bloc_alumne if x.text == "10" ]
-
-    condicio_esquerra_2 = lambda x,distancia, desde: int(x.attrib['left'])+distancia-2 <= int(desde.attrib['left']) and int(x.attrib['left'])+distancia+2 >= int(desde.attrib['left'])
-    condicio_dalt_2 = lambda x,distancia, desde: int(x.attrib['top'])+distancia-2 <= int(desde.attrib['top']) and int(x.attrib['top'])+distancia+2 >= int(desde.attrib['top'])
-
-    busca_esquerra = lambda elements, distancia, desde: next( x for x in elements if condicio_dalt_2(x,0, desde ) and condicio_esquerra_2( x, distancia, desde) )
-    busca_dalt = lambda elements, distancia, desde: next( x for x in elements if condicio_dalt_2(x,distancia, desde ) and condicio_esquerra_2( x, 0, desde) )
-
-    for deu in deus:
-        d1=busca_dalt( bloc_alumne, 7, deu )
-        d2=busca_esquerra( bloc_alumne, 28, d1 )
-        e_uf=busca_esquerra( bloc_alumne, 28, d2 )
-        if e_uf.text.startswith('MP'):
-            continue
-        l=sorted( [ x for x in bloc_alumne if ( x.text.startswith( 'MP' ) and
-                                                         x.attrib['left']==e_uf.attrib['left'] and
-                                                         int(x.attrib['top']) < int(e_uf.attrib['top'] )
-                                                       )
-                           ], key= lambda x: int(x.attrib['top'] )
-                 )
-        e_mp=l[0]
-        mp=next( m for m in mps if m['nom']==e_mp.text )
-        ufs=mp['ufs']
-        uf=next( u for u in ufs if u['uf'] == e_uf.text )
-        uf['nota_raw'] += deu.text
-        new_ufs=[ u for u in ufs if u['uf']!=e_uf.text ]
-        new_ufs.append( uf )
-        index_mp=next( x for (x,i) in enumerate( mps ) if i['nom']==e_mp.text )
-        mps[index_mp]= { 'nom':e_mp.text, 'ufs': new_ufs }
-
-
-
 def split_blocs_mps( bloc_alumne ):
     mps_detectats = [ d for d in bloc_alumne if re.match( 'MP0\d{2}', d.text ) ]
     mps=[]
@@ -114,7 +80,6 @@ def split_blocs_mps( bloc_alumne ):
         ufs = pilla_elements_ufs( mp_detectat, bloc_alumne )
         mps.append( {'nom':mp_detectat.text,
                      'ufs':ufs})
-    #tracta_els_10s( bloc_alumne, mps )
     return mps
 
 
