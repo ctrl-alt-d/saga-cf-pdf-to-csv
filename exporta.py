@@ -32,7 +32,7 @@ def dades_alumne( bloc_alumne ):
     nom_alumne = next( d.text for d in bloc_alumne if d.attrib.get('left','')=="151" )
     alumne['nom'] = nom_alumne
     return alumne
-    
+
 def pilla_elements_ufs( mp_detectat, bloc_alumne ):
     #totes les uf's sota d'aquest MP
     ufs=[]
@@ -49,10 +49,19 @@ def pilla_elements_ufs( mp_detectat, bloc_alumne ):
             s1 = next( n for n in bloc_alumne if n.attrib['top']==e.attrib['top'] and int(n.attrib['left'])>int(e.attrib['left']) )
             nota_raw = s1.text
             try:
+                #les R queden separades, les busco.
                 s2 = next( n for n in bloc_alumne if n.attrib['top']==s1.attrib['top'] and int(n.attrib['left'])>int(s1.attrib['left']) )
                 nota_raw += ( " " + s2.text if ( s2.text.isdigit() or s2.text == "R") else "" )
+
+                mateixa_columna = lambda x, desde: int(x.attrib['left'])-3 <= int(desde.attrib['left']) and int(x.attrib['left'])+3>= int(desde.attrib['left'])
+                elements_per_sota = sorted(  [ x for x in bloc_alumne if ( int(x.attrib['top']) >  int( s2.attrib['top'] ) and mateixa_columna( s2, x ) )],
+                                             key= lambda x: int(x.attrib['top']) )
+                seguent_per_sota = next( x for x in elements_per_sota )
+                if seguent_per_sota.text == '10':
+                    nota_raw += " 10"
             except StopIteration:
                 pass
+
         else:
             try:
                 nota_raw_tmp= next( n.text for n in bloc_alumne if n.attrib['top']==e.attrib['top'] and int(n.attrib['left'])>int(e.attrib['left']) )
@@ -62,22 +71,56 @@ def pilla_elements_ufs( mp_detectat, bloc_alumne ):
                 pass
     if uf:
         ufs.append( { 'uf':uf, 'nota_raw':nota_raw } )
-            
+
     return ufs
+
+def tracta_els_10s( bloc_alumne, mps ):
+    deus=[ x for x in bloc_alumne if x.text == "10" ]
+
+    condicio_esquerra_2 = lambda x,distancia, desde: int(x.attrib['left'])+distancia-2 <= int(desde.attrib['left']) and int(x.attrib['left'])+distancia+2 >= int(desde.attrib['left'])
+    condicio_dalt_2 = lambda x,distancia, desde: int(x.attrib['top'])+distancia-2 <= int(desde.attrib['top']) and int(x.attrib['top'])+distancia+2 >= int(desde.attrib['top'])
+
+    busca_esquerra = lambda elements, distancia, desde: next( x for x in elements if condicio_dalt_2(x,0, desde ) and condicio_esquerra_2( x, distancia, desde) )
+    busca_dalt = lambda elements, distancia, desde: next( x for x in elements if condicio_dalt_2(x,distancia, desde ) and condicio_esquerra_2( x, 0, desde) )
+
+    for deu in deus:
+        d1=busca_dalt( bloc_alumne, 7, deu )
+        d2=busca_esquerra( bloc_alumne, 28, d1 )
+        e_uf=busca_esquerra( bloc_alumne, 28, d2 )
+        if e_uf.text.startswith('MP'):
+            continue
+        l=sorted( [ x for x in bloc_alumne if ( x.text.startswith( 'MP' ) and
+                                                         x.attrib['left']==e_uf.attrib['left'] and
+                                                         int(x.attrib['top']) < int(e_uf.attrib['top'] )
+                                                       )
+                           ], key= lambda x: int(x.attrib['top'] )
+                 )
+        e_mp=l[0]
+        mp=next( m for m in mps if m['nom']==e_mp.text )
+        ufs=mp['ufs']
+        uf=next( u for u in ufs if u['uf'] == e_uf.text )
+        uf['nota_raw'] += deu.text
+        new_ufs=[ u for u in ufs if u['uf']!=e_uf.text ]
+        new_ufs.append( uf )
+        index_mp=next( x for (x,i) in enumerate( mps ) if i['nom']==e_mp.text )
+        mps[index_mp]= { 'nom':e_mp.text, 'ufs': new_ufs }
+
+
 
 def split_blocs_mps( bloc_alumne ):
     mps_detectats = [ d for d in bloc_alumne if re.match( 'MP0\d{2}', d.text ) ]
     mps=[]
-    for mp_detectat in mps_detectats:    
+    for mp_detectat in mps_detectats:
         ufs = pilla_elements_ufs( mp_detectat, bloc_alumne )
         mps.append( {'nom':mp_detectat.text,
                      'ufs':ufs})
+    #tracta_els_10s( bloc_alumne, mps )
     return mps
 
 
 def cuina_nota( nota_raw ):
-    f0 = re.search( "^-$", nota_raw )    
-    f1 = re.search( "^- (\d+)$", nota_raw )    
+    f0 = re.search( "^-$", nota_raw )
+    f1 = re.search( "^- (\d+)$", nota_raw )
     f2 = re.search( "^- (\d+) (A. | *)(\d+)$", nota_raw )
     f4 = re.search( "^- (\d+) (\w+)$", nota_raw )
     if f0:
@@ -96,7 +139,7 @@ def cuina_nota( nota_raw ):
         nota=nota_raw
         hores = None
     return nota, hores
-    
+
 def tracta_fitxer(fitxer, debug_alumne = None):
     s=pdf2xml(open(fitxer,'rb'))
     root = etree.fromstring(s.replace('\n',''))
@@ -117,8 +160,3 @@ fitxers = ['smx1a.pdf','smx1b.pdf','smx1c.pdf','smx2a.pdf','smx2b.pdf',]
 print "Grup|Alumne|MP|UF|nota|hores"
 for fitxer in fitxers:
     tracta_fitxer(fitxer)
-
-
-
-
-
